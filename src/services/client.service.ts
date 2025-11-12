@@ -281,6 +281,18 @@ class ClientService extends EventTarget {
       needSort?: boolean
     } = {}
   ) {
+    // Generate key early to check for duplicates
+    const key = this.generateMultipleTimelinesKey(subRequests)
+    const existingTimeline = this.timelines[key]
+
+    // Log duplicate subscription attempts for monitoring
+    if (existingTimeline && !Array.isArray(existingTimeline)) {
+      console.debug(
+        '[ClientService] Duplicate subscription detected - consider deduplicating at caller level:',
+        key
+      )
+    }
+
     const newEventIdSet = new Set<string>()
     const requestCount = subRequests.length
     const threshold = Math.floor(requestCount / 2)
@@ -323,7 +335,7 @@ class ClientService extends EventTarget {
       })
     )
 
-    const key = this.generateMultipleTimelinesKey(subRequests)
+    // Use the key already generated earlier for deduplication check
     this.timelines[key] = subs.map((sub) => sub.timelineKey)
 
     return {
@@ -1062,12 +1074,20 @@ class ClientService extends EventTarget {
     if (!pubkey) {
       throw new Error('Invalid id')
     }
+
+    // Stale-While-Revalidate (SWR) pattern
     if (!skipCache) {
       const localProfile = await indexedDb.getReplaceableEvent(pubkey, kinds.Metadata)
       if (localProfile) {
+        // Return cached immediately, revalidate in background
+        this.revalidateProfileInBackground(pubkey, relays).catch(() => {
+          // Silently fail background revalidation
+        })
         return localProfile
       }
     }
+
+    // No cache hit - fetch fresh
     const profileFromBigRelays = await this.replaceableEventFromBigRelaysDataloader.load({
       pubkey,
       kind: kinds.Metadata
@@ -1115,6 +1135,76 @@ class ClientService extends EventTarget {
 
   async updateProfileEventCache(event: NEvent) {
     await this.updateReplaceableEventFromBigRelaysCache(event)
+  }
+
+  /**
+   * Prefetch profiles for multiple pubkeys to prevent waterfall requests
+   * Uses DataLoader batching for efficiency
+   */
+  async prefetchProfiles(pubkeys: string[]): Promise<void> {
+    // Deduplicate and filter invalid pubkeys
+    const uniquePubkeys = Array.from(new Set(pubkeys.filter(isValidPubkey)))
+
+    if (uniquePubkeys.length === 0) return
+
+    // Trigger parallel fetches - DataLoader will batch them
+    await Promise.allSettled(
+      uniquePubkeys.map((pubkey) => this.fetchProfile(pubkey))
+    )
+  }
+
+  /**
+   * Revalidates a profile in the background (part of SWR pattern)
+   * Fetches fresh profile and updates cache if newer version found
+   */
+  private async revalidateProfileInBackground(pubkey: string, relays: string[] = []): Promise<void> {
+    try {
+      // Fetch fresh profile from relays
+      const freshProfile = await this.replaceableEventFromBigRelaysDataloader.load({
+        pubkey,
+        kind: kinds.Metadata
+      })
+
+      if (!freshProfile) {
+        // Try provided relays if big relays didn't have it
+        if (relays.length) {
+          const profileFromRelays = await this.tryHarderToFetchEvent(
+            relays,
+            {
+              authors: [pubkey],
+              kinds: [kinds.Metadata],
+              limit: 1
+            },
+            true
+          )
+          if (profileFromRelays) {
+            await this.updateProfileEventCache(profileFromRelays)
+            this.addUsernameToIndex(profileFromRelays)
+            indexedDb.putReplaceableEvent(profileFromRelays)
+            // Dispatch event so components can update if needed
+            this.dispatchEvent(
+              new CustomEvent('profileUpdated', { detail: { pubkey, profile: profileFromRelays } })
+            )
+          }
+        }
+        return
+      }
+
+      // Check if it's newer than cached version
+      const cached = await indexedDb.getReplaceableEvent(pubkey, kinds.Metadata)
+      if (!cached || freshProfile.created_at > cached.created_at) {
+        await this.updateProfileEventCache(freshProfile)
+        this.addUsernameToIndex(freshProfile)
+        indexedDb.putReplaceableEvent(freshProfile)
+        // Dispatch event so components can update if needed
+        this.dispatchEvent(
+          new CustomEvent('profileUpdated', { detail: { pubkey, profile: freshProfile } })
+        )
+      }
+    } catch (error) {
+      // Silently fail - we already returned cached data
+      console.debug('Background profile revalidation failed:', error)
+    }
   }
 
   /** =========== Relay list =========== */

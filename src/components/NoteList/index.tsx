@@ -210,6 +210,11 @@ const NoteList = forwardRef(
             onEvents: (events, eosed) => {
               if (events.length > 0) {
                 setEvents(events)
+                // Prefetch profiles to prevent waterfall requests
+                const pubkeys = events.map((e) => e.pubkey)
+                client.prefetchProfiles(pubkeys).catch(() => {
+                  // Silently fail - profiles will load individually
+                })
               }
               if (areAlgoRelays) {
                 setHasMore(false)
@@ -294,6 +299,11 @@ const NoteList = forwardRef(
           return
         }
         setEvents((oldEvents) => [...oldEvents, ...newEvents])
+        // Prefetch profiles for new events
+        const pubkeys = newEvents.map((e) => e.pubkey)
+        client.prefetchProfiles(pubkeys).catch(() => {
+          // Silently fail - profiles will load individually
+        })
       }
 
       const observerInstance = new IntersectionObserver((entries) => {
