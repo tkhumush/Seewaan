@@ -68,7 +68,7 @@ class ClientService extends EventTarget {
   )
   private fetchEventFromBigRelaysDataloader = new DataLoader<string, NEvent | undefined>(
     this.fetchEventsFromBigRelays.bind(this),
-    { cache: false, batchScheduleFn: (callback) => setTimeout(callback, 50) }
+    { cache: false, batchScheduleFn: (callback) => setTimeout(callback, 10) } // Reduced from 50ms to 10ms
   )
   private trendingNotesCache: NEvent[] | null = null
 
@@ -122,8 +122,9 @@ class ClientService extends EventTarget {
             mentions.push(tagValue)
           }
         })
+        // Limit to first 10 mentions to avoid slow publishing with many mentions
         if (mentions.length > 0) {
-          const relayLists = await this.fetchRelayLists(mentions)
+          const relayLists = await this.fetchRelayLists(mentions.slice(0, 10))
           relayLists.forEach((relayList) => {
             _additionalRelayUrls.push(...relayList.read.slice(0, 4))
           })
@@ -165,7 +166,7 @@ class ClientService extends EventTarget {
           // eslint-disable-next-line @typescript-eslint/no-this-alias
           const that = this
           const relay = await this.pool.ensureRelay(url)
-          relay.publishTimeout = 10_000 // 10s
+          relay.publishTimeout = 5_000 // 5s - reduced from 10s for faster publishing
           return relay
             .publish(event)
             .then(() => {
@@ -316,8 +317,11 @@ class ClientService extends EventTarget {
                 eventIdSet.add(evt.id)
                 events.push(evt)
               })
-              events = events.sort((a, b) => b.created_at - a.created_at).slice(0, filter.limit)
-              eventIdSet = new Set(events.map((evt) => evt.id))
+              // Only sort if we received new events (avoid redundant sorting)
+              if (_events.length > 0) {
+                events = events.sort((a, b) => b.created_at - a.created_at).slice(0, filter.limit)
+                eventIdSet = new Set(events.map((evt) => evt.id))
+              }
 
               if (eosedCount >= threshold) {
                 onEvents(events, eosedCount >= requestCount)
