@@ -53,12 +53,12 @@ class ClientService extends EventTarget {
   > = {}
   // LRU caches to prevent unbounded memory growth
   private replaceableEventCacheMap = new LRUCache<string, NEvent>({
-    max: 500, // Limit to 500 replaceable events (profiles, relay lists, etc.)
+    max: 2000, // Limit to 2000 replaceable events (profiles, relay lists, etc.) - increased for large communities
     ttl: 1000 * 60 * 30, // 30 minutes
     updateAgeOnGet: true
   })
   private eventCacheMap = new LRUCache<string, Promise<NEvent | undefined>>({
-    max: 1000, // Limit to 1000 cached events
+    max: 3000, // Limit to 3000 cached events - increased for larger feeds
     ttl: 1000 * 60 * 10, // 10 minutes
     updateAgeOnGet: true
   })
