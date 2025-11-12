@@ -1,26 +1,28 @@
 import { match } from 'path-to-regexp'
-import { isValidElement } from 'react'
-import AppearanceSettingsPage from './pages/secondary/AppearanceSettingsPage'
-import BookmarkPage from './pages/secondary/BookmarkPage'
-import FollowingListPage from './pages/secondary/FollowingListPage'
-import GeneralSettingsPage from './pages/secondary/GeneralSettingsPage'
-import MuteListPage from './pages/secondary/MuteListPage'
-import Nip05CommunityPage from './pages/secondary/Nip05CommunityPage'
-import NoteListPage from './pages/secondary/NoteListPage'
-import NotePage from './pages/secondary/NotePage'
-import OthersRelaySettingsPage from './pages/secondary/OthersRelaySettingsPage'
-import PostSettingsPage from './pages/secondary/PostSettingsPage'
-import ProfileEditorPage from './pages/secondary/ProfileEditorPage'
-import ProfileListPage from './pages/secondary/ProfileListPage'
-import ProfilePage from './pages/secondary/ProfilePage'
-import RelayPage from './pages/secondary/RelayPage'
-import RelayReviewsPage from './pages/secondary/RelayReviewsPage'
-import RelaySettingsPage from './pages/secondary/RelaySettingsPage'
-import RizfulPage from './pages/secondary/RizfulPage'
-import SearchPage from './pages/secondary/SearchPage'
-import SettingsPage from './pages/secondary/SettingsPage'
-import TranslationPage from './pages/secondary/TranslationPage'
-import WalletPage from './pages/secondary/WalletPage'
+import { isValidElement, lazy } from 'react'
+
+// Lazy load all secondary pages for code splitting
+const AppearanceSettingsPage = lazy(() => import('./pages/secondary/AppearanceSettingsPage'))
+const BookmarkPage = lazy(() => import('./pages/secondary/BookmarkPage'))
+const FollowingListPage = lazy(() => import('./pages/secondary/FollowingListPage'))
+const GeneralSettingsPage = lazy(() => import('./pages/secondary/GeneralSettingsPage'))
+const MuteListPage = lazy(() => import('./pages/secondary/MuteListPage'))
+const Nip05CommunityPage = lazy(() => import('./pages/secondary/Nip05CommunityPage'))
+const NoteListPage = lazy(() => import('./pages/secondary/NoteListPage'))
+const NotePage = lazy(() => import('./pages/secondary/NotePage'))
+const OthersRelaySettingsPage = lazy(() => import('./pages/secondary/OthersRelaySettingsPage'))
+const PostSettingsPage = lazy(() => import('./pages/secondary/PostSettingsPage'))
+const ProfileEditorPage = lazy(() => import('./pages/secondary/ProfileEditorPage'))
+const ProfileListPage = lazy(() => import('./pages/secondary/ProfileListPage'))
+const ProfilePage = lazy(() => import('./pages/secondary/ProfilePage'))
+const RelayPage = lazy(() => import('./pages/secondary/RelayPage'))
+const RelayReviewsPage = lazy(() => import('./pages/secondary/RelayReviewsPage'))
+const RelaySettingsPage = lazy(() => import('./pages/secondary/RelaySettingsPage'))
+const RizfulPage = lazy(() => import('./pages/secondary/RizfulPage'))
+const SearchPage = lazy(() => import('./pages/secondary/SearchPage'))
+const SettingsPage = lazy(() => import('./pages/secondary/SettingsPage'))
+const TranslationPage = lazy(() => import('./pages/secondary/TranslationPage'))
+const WalletPage = lazy(() => import('./pages/secondary/WalletPage'))
 
 const ROUTES = [
   { path: '/notes', element: <NoteListPage /> },

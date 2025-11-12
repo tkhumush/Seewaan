@@ -14,6 +14,7 @@ import { useNostr } from '@/providers/NostrProvider'
 import { useUserTrust } from '@/providers/UserTrustProvider'
 import client from '@/services/client.service'
 import { TFeedSubRequest } from '@/types'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import dayjs from 'dayjs'
 import { Event } from 'nostr-tools'
 import { decode } from 'nostr-tools/nip19'
@@ -77,6 +78,18 @@ const NoteList = forwardRef(
     const supportTouch = useMemo(() => isTouchDevice(), [])
     const bottomRef = useRef<HTMLDivElement | null>(null)
     const topRef = useRef<HTMLDivElement | null>(null)
+    const parentRef = useRef<HTMLDivElement | null>(null)
+
+    // Create stable key for subRequests to prevent unnecessary re-subscriptions
+    const subRequestsKey = useMemo(() => {
+      return subRequests
+        .map((req) => {
+          const urlsKey = req.urls.sort().join(',')
+          const filterKey = JSON.stringify(req.filter)
+          return `${urlsKey}:${filterKey}`
+        })
+        .join('|')
+    }, [subRequests])
 
     const shouldHideEvent = useCallback(
       (evt: Event) => {
@@ -127,6 +140,15 @@ const NoteList = forwardRef(
         return true
       })
     }, [events, showCount, shouldHideEvent])
+
+    // Virtualizer for efficient list rendering
+    const rowVirtualizer = useVirtualizer({
+      count: filteredEvents.length,
+      getScrollElement: () => (typeof window !== 'undefined' ? window.document.body : null),
+      estimateSize: () => 200, // Estimated height of a note card
+      overscan: 5, // Number of items to render outside visible area
+      scrollMargin: parentRef.current?.offsetTop ?? 0
+    })
 
     const filteredNewEvents = useMemo(() => {
       const idSet = new Set<string>()
@@ -241,7 +263,7 @@ const NoteList = forwardRef(
       return () => {
         promise.then((closer) => closer())
       }
-    }, [JSON.stringify(subRequests), refreshCount, showKinds])
+    }, [subRequestsKey, refreshCount, showKinds, pubkey, startLogin, areAlgoRelays, showRelayCloseReason])
 
     useEffect(() => {
       const options = {
@@ -302,18 +324,45 @@ const NoteList = forwardRef(
     }
 
     const list = (
-      <div className="min-h-screen">
+      <div ref={parentRef} className="min-h-screen">
+        {/* Pinned notes - not virtualized as they're typically few */}
         {pinnedEventIds.map((id) => (
           <PinnedNoteCard key={id} eventId={id} className="w-full" />
         ))}
-        {filteredEvents.map((event) => (
-          <NoteCard
-            key={event.id}
-            className="w-full"
-            event={event}
-            filterMutedNotes={filterMutedNotes}
-          />
-        ))}
+
+        {/* Virtualized list */}
+        <div
+          style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
+            width: '100%',
+            position: 'relative'
+          }}
+        >
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const event = filteredEvents[virtualRow.index]
+            return (
+              <div
+                key={event.id}
+                data-index={virtualRow.index}
+                ref={rowVirtualizer.measureElement}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualRow.start}px)`
+                }}
+              >
+                <NoteCard
+                  className="w-full"
+                  event={event}
+                  filterMutedNotes={filterMutedNotes}
+                />
+              </div>
+            )
+          })}
+        </div>
+
         {hasMore || loading ? (
           <div ref={bottomRef}>
             <NoteCardLoadingSkeleton />

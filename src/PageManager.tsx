@@ -10,6 +10,7 @@ import {
   createRef,
   ReactNode,
   RefObject,
+  Suspense,
   useContext,
   useEffect,
   useRef,
@@ -37,6 +38,13 @@ import { routes } from './routes'
 import modalManager from './services/modal-manager.service'
 
 export type TPrimaryPageName = keyof typeof PRIMARY_PAGE_MAP
+
+// Loading fallback for lazy-loaded pages
+const PageLoadingSkeleton = () => (
+  <div className="flex items-center justify-center h-screen">
+    <div className="animate-pulse text-muted-foreground">Loading...</div>
+  </div>
+)
 
 type TPrimaryPageContext = {
   navigate: (page: TPrimaryPageName, props?: object) => void
@@ -320,7 +328,7 @@ export function PageManager({ maxStackSize = 5 }: { maxStackSize?: number }) {
                       display: index === secondaryStack.length - 1 ? 'block' : 'none'
                     }}
                   >
-                    {item.component}
+                    <Suspense fallback={<PageLoadingSkeleton />}>{item.component}</Suspense>
                   </div>
                 ))}
               {primaryPages.map(({ name, element, props }) => (
@@ -377,7 +385,7 @@ export function PageManager({ maxStackSize = 5 }: { maxStackSize?: number }) {
                           display: index === secondaryStack.length - 1 ? 'block' : 'none'
                         }}
                       >
-                        {item.component}
+                        <Suspense fallback={<PageLoadingSkeleton />}>{item.component}</Suspense>
                       </div>
                     ))}
                   {primaryPages.map(({ name, element, props }) => (
