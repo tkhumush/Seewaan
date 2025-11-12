@@ -1,9 +1,10 @@
 import { Skeleton } from '@/components/ui/skeleton'
+import { toNip05Community } from '@/lib/link'
 import { fetchPubkeysFromDomain } from '@/lib/nip05'
+import { useSecondaryPage } from '@/PageManager'
 import { useNostr } from '@/providers/NostrProvider'
 import { useNip05Communities } from '@/providers/Nip05CommunitiesProvider'
 import client from '@/services/client.service'
-import nip05CommunityService from '@/services/nip05-community.service'
 import { TNip05Community } from '@/types'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -101,13 +102,14 @@ export default function FollowingFavoriteDomainList({
       for (let i = 0; i < sortedDomains.length; i += communityBatchSize) {
         const batch = sortedDomains.slice(i, i + communityBatchSize)
         const communityData = await Promise.all(
-          batch.map(async ([domain, followedPubkeys]) => {
+          batch.map(async ([domain]) => {
             try {
-              let community: TNip05Community | undefined
+              // First try to get cached data
+              let community = await getCommunity(domain)
 
-              // Try to fetch from nostr.json for actual member count
-              console.log('[FollowingDomains] Fetching data for:', domain)
-              try {
+              // If no cached data or stale data, refresh from nostr.json
+              if (!community || !community.members || community.members.length === 0) {
+                console.log('[FollowingDomains] Fetching fresh data for:', domain)
                 const members = await fetchPubkeysFromDomain(domain)
                 if (members.length > 0) {
                   community = {
@@ -117,34 +119,12 @@ export default function FollowingFavoriteDomainList({
                     memberCount: members.length,
                     lastUpdated: Date.now()
                   }
-                  // Save to service cache immediately
-                  await nip05CommunityService.addCommunity(community)
-                  console.log(
-                    '[FollowingDomains] Successfully fetched:',
-                    domain,
-                    members.length,
-                    'members'
-                  )
-                } else {
-                  // Domain doesn't provide full nostr.json (query-only or CORS error)
-                  // Don't show as a community - these domains only support name-based queries
-                  console.log(
-                    '[FollowingDomains] Domain',
-                    domain,
-                    'does not provide full directory - skipping'
-                  )
-                  community = undefined
                 }
-              } catch (fetchError) {
-                // Fetch failed (CORS, network, etc.)
-                // Don't create fallback community - only show domains with full directories
-                console.log('[FollowingDomains] Failed to fetch from', domain, '- skipping')
-                community = undefined
               }
 
               return { domain, community }
             } catch (error) {
-              console.error('[FollowingDomains] Error processing community:', domain, error)
+              console.error('[FollowingDomains] Error fetching community:', domain, error)
               return { domain, community: undefined }
             }
           })
@@ -274,6 +254,7 @@ export default function FollowingFavoriteDomainList({
       {domains.slice(0, showCount).map(([domain]) => (
         <DomainItem
           key={domain}
+          domain={domain}
           community={communities.get(domain)}
           isFavorite={favoriteDomains.includes(domain)}
           onFavoriteChange={(select) => {
@@ -308,10 +289,12 @@ export default function FollowingFavoriteDomainList({
 }
 
 function DomainItem({
+  domain,
   community,
   isFavorite,
   onFavoriteChange
 }: {
+  domain: string
   community?: TNip05Community
   isFavorite: boolean
   onFavoriteChange: (select: boolean) => void

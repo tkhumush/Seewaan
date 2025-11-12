@@ -183,7 +183,11 @@ class Nip05CommunityService {
       const members = await fetchPubkeysFromDomain(domain)
 
       if (members.length === 0) {
-        console.warn('No members found for domain:', domain)
+        console.warn(
+          'No members found for domain:',
+          domain,
+          '- domain may be query-only or have CORS restrictions'
+        )
         return undefined
       }
 
