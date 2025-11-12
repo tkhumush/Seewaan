@@ -317,11 +317,8 @@ class ClientService extends EventTarget {
                 eventIdSet.add(evt.id)
                 events.push(evt)
               })
-              // Only sort if we received new events (avoid redundant sorting)
-              if (_events.length > 0) {
-                events = events.sort((a, b) => b.created_at - a.created_at).slice(0, filter.limit)
-                eventIdSet = new Set(events.map((evt) => evt.id))
-              }
+              events = events.sort((a, b) => b.created_at - a.created_at).slice(0, filter.limit)
+              eventIdSet = new Set(events.map((evt) => evt.id))
 
               if (eosedCount >= threshold) {
                 onEvents(events, eosedCount >= requestCount)
