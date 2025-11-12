@@ -6,8 +6,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useScreenSize } from '@/providers/ScreenSizeProvider'
 import { TEmoji } from '@/types'
-import { useState } from 'react'
-import EmojiPicker from '../EmojiPicker'
+import { lazy, Suspense, useState } from 'react'
+
+// Lazy load emoji picker to reduce initial bundle size (~500KB)
+const EmojiPicker = lazy(() => import('../EmojiPicker'))
 
 export default function EmojiPickerDialog({
   children,
@@ -24,13 +26,15 @@ export default function EmojiPickerDialog({
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerTrigger asChild>{children}</DrawerTrigger>
         <DrawerContent>
-          <EmojiPicker
-            onEmojiClick={(emoji, e) => {
-              e.stopPropagation()
-              setOpen(false)
-              onEmojiClick?.(emoji)
-            }}
-          />
+          <Suspense fallback={<div className="flex items-center justify-center p-4">Loading...</div>}>
+            <EmojiPicker
+              onEmojiClick={(emoji, e) => {
+                e.stopPropagation()
+                setOpen(false)
+                onEmojiClick?.(emoji)
+              }}
+            />
+          </Suspense>
         </DrawerContent>
       </Drawer>
     )
@@ -40,13 +44,15 @@ export default function EmojiPickerDialog({
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
       <DropdownMenuContent side="top" className="p-0 w-fit">
-        <EmojiPicker
-          onEmojiClick={(emoji, e) => {
-            e.stopPropagation()
-            setOpen(false)
-            onEmojiClick?.(emoji)
-          }}
-        />
+        <Suspense fallback={<div className="flex items-center justify-center p-4">Loading...</div>}>
+          <EmojiPicker
+            onEmojiClick={(emoji, e) => {
+              e.stopPropagation()
+              setOpen(false)
+              onEmojiClick?.(emoji)
+            }}
+          />
+        </Suspense>
       </DropdownMenuContent>
     </DropdownMenu>
   )

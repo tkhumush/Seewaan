@@ -51,8 +51,17 @@ class ClientService extends EventTarget {
     | string[]
     | undefined
   > = {}
-  private replaceableEventCacheMap = new Map<string, NEvent>()
-  private eventCacheMap = new Map<string, Promise<NEvent | undefined>>()
+  // LRU caches to prevent unbounded memory growth
+  private replaceableEventCacheMap = new LRUCache<string, NEvent>({
+    max: 500, // Limit to 500 replaceable events (profiles, relay lists, etc.)
+    ttl: 1000 * 60 * 30, // 30 minutes
+    updateAgeOnGet: true
+  })
+  private eventCacheMap = new LRUCache<string, Promise<NEvent | undefined>>({
+    max: 1000, // Limit to 1000 cached events
+    ttl: 1000 * 60 * 10, // 10 minutes
+    updateAgeOnGet: true
+  })
   private eventDataLoader = new DataLoader<string, NEvent | undefined>(
     (ids) => Promise.all(ids.map((id) => this._fetchEvent(id))),
     { cacheMap: this.eventCacheMap }
@@ -560,23 +569,32 @@ class ClientService extends EventTarget {
           return
         }
 
-        // find the right position to insert
-        let idx = 0
-        for (const ref of timeline.refs) {
-          if (evt.created_at > ref[1] || (evt.created_at === ref[1] && evt.id < ref[0])) {
-            break
-          }
-          // the event is already in the cache
+        // find the right position to insert using binary search (O(log n) vs O(n))
+        let left = 0
+        let right = timeline.refs.length
+
+        while (left < right) {
+          const mid = Math.floor((left + right) / 2)
+          const ref = timeline.refs[mid]
+
+          // Check if event already exists
           if (evt.created_at === ref[1] && evt.id === ref[0]) {
             return
           }
-          idx++
+
+          // Compare by timestamp first, then by ID for tie-breaking
+          if (evt.created_at > ref[1] || (evt.created_at === ref[1] && evt.id < ref[0])) {
+            right = mid
+          } else {
+            left = mid + 1
+          }
         }
+
         // the event is too old, ignore it
-        if (idx >= timeline.refs.length) return
+        if (left >= timeline.refs.length) return
 
         // insert the event to the right position
-        timeline.refs.splice(idx, 0, [evt.id, evt.created_at])
+        timeline.refs.splice(left, 0, [evt.id, evt.created_at])
       },
       oneose: (eosed) => {
         if (eosed && !eosedAt) {

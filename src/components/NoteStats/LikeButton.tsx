@@ -14,12 +14,14 @@ import noteStatsService from '@/services/note-stats.service'
 import { TEmoji } from '@/types'
 import { Loader, SmilePlus } from 'lucide-react'
 import { Event } from 'nostr-tools'
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Emoji from '../Emoji'
-import EmojiPicker from '../EmojiPicker'
 import SuggestedEmojis from '../SuggestedEmojis'
 import { formatCount } from './utils'
+
+// Lazy load emoji picker to reduce initial bundle size (~500KB)
+const EmojiPicker = lazy(() => import('../EmojiPicker'))
 
 export default function LikeButton({ event }: { event: Event }) {
   const { t } = useTranslation()
@@ -98,14 +100,16 @@ export default function LikeButton({ event }: { event: Event }) {
         <Drawer open={isEmojiReactionsOpen} onOpenChange={setIsEmojiReactionsOpen}>
           <DrawerOverlay onClick={() => setIsEmojiReactionsOpen(false)} />
           <DrawerContent hideOverlay>
-            <EmojiPicker
-              onEmojiClick={(emoji) => {
-                setIsEmojiReactionsOpen(false)
-                if (!emoji) return
+            <Suspense fallback={<div className="flex items-center justify-center p-4">Loading...</div>}>
+              <EmojiPicker
+                onEmojiClick={(emoji) => {
+                  setIsEmojiReactionsOpen(false)
+                  if (!emoji) return
 
-                like(emoji)
-              }}
-            />
+                  like(emoji)
+                }}
+              />
+            </Suspense>
           </DrawerContent>
         </Drawer>
       </>
@@ -125,15 +129,17 @@ export default function LikeButton({ event }: { event: Event }) {
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent side="top" className="p-0 w-fit">
         {isPickerOpen ? (
-          <EmojiPicker
-            onEmojiClick={(emoji, e) => {
-              e.stopPropagation()
-              setIsEmojiReactionsOpen(false)
-              if (!emoji) return
+          <Suspense fallback={<div className="flex items-center justify-center p-4">Loading...</div>}>
+            <EmojiPicker
+              onEmojiClick={(emoji, e) => {
+                e.stopPropagation()
+                setIsEmojiReactionsOpen(false)
+                if (!emoji) return
 
-              like(emoji)
-            }}
-          />
+                like(emoji)
+              }}
+            />
+          </Suspense>
         ) : (
           <SuggestedEmojis
             onEmojiClick={(emoji) => {

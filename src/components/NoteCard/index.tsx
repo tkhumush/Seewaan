@@ -3,11 +3,11 @@ import { isMentioningMutedUsers } from '@/lib/event'
 import { useContentPolicy } from '@/providers/ContentPolicyProvider'
 import { useMuteList } from '@/providers/MuteListProvider'
 import { Event, kinds } from 'nostr-tools'
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import MainNoteCard from './MainNoteCard'
 import RepostNoteCard from './RepostNoteCard'
 
-export default function NoteCard({
+const NoteCard = memo(function NoteCard({
   event,
   className,
   filterMutedNotes = true,
@@ -42,7 +42,17 @@ export default function NoteCard({
     )
   }
   return <MainNoteCard event={event} className={className} pinned={pinned} />
-}
+}, (prevProps, nextProps) => {
+  // Only re-render if event ID, pinned status, or className changes
+  return (
+    prevProps.event.id === nextProps.event.id &&
+    prevProps.pinned === nextProps.pinned &&
+    prevProps.className === nextProps.className &&
+    prevProps.filterMutedNotes === nextProps.filterMutedNotes
+  )
+})
+
+export default NoteCard
 
 export function NoteCardLoadingSkeleton() {
   return (
