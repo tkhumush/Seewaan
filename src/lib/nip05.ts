@@ -96,16 +96,18 @@ export async function fetchPubkeysFromDomain(domain: string): Promise<string[]> 
         return true
       }) as string[]
 
-      // Filter out query-only domains: If we get fewer than 3 users,
+      // Filter out query-only domains: If we get only 1 user,
       // this domain likely only supports name-based queries and shouldn't
       // be considered a community with a full directory
-      if (pubkeys.length < 3) {
+      // Note: We allow 2+ users to support small but legitimate communities
+      if (pubkeys.length === 1) {
         console.log(
-          `[fetchPubkeysFromDomain] Domain ${domain} returned ${pubkeys.length} users - likely query-only, not a full directory`
+          `[fetchPubkeysFromDomain] Domain ${domain} returned only 1 user - likely query-only, not a full directory`
         )
         return []
       }
 
+      console.log(`[fetchPubkeysFromDomain] Domain ${domain} returned ${pubkeys.length} users`)
       return pubkeys
     } finally {
       clearTimeout(timeoutId)
