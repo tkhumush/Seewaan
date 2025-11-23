@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next'
 export default function GuestModeIndicator() {
   const { t } = useTranslation()
   const { account } = useNostr()
-  const { showModal, isGuest } = useGuestConversion()
+  const { isGuest } = useGuestConversion()
   const { push } = useSecondaryPage()
   const [engagement, setEngagement] = useState(guestEngagementService.getEngagement())
 
