@@ -8,6 +8,7 @@ import { DeletedEventProvider } from '@/providers/DeletedEventProvider'
 import { FavoriteRelaysProvider } from '@/providers/FavoriteRelaysProvider'
 import { FeedProvider } from '@/providers/FeedProvider'
 import { FollowListProvider } from '@/providers/FollowListProvider'
+import { GuestConversionProvider } from '@/providers/GuestConversionProvider'
 import { KindFilterProvider } from '@/providers/KindFilterProvider'
 import { MediaUploadServiceProvider } from '@/providers/MediaUploadServiceProvider'
 import { MuteListProvider } from '@/providers/MuteListProvider'
@@ -33,8 +34,9 @@ export default function App(): JSX.Element {
             <ContentPolicyProvider>
               <DeletedEventProvider>
                 <NostrProvider>
-                  <ZapProvider>
-                    <TranslationServiceProvider>
+                  <GuestConversionProvider>
+                    <ZapProvider>
+                      <TranslationServiceProvider>
                       <FavoriteRelaysProvider>
                         <Nip05CommunitiesProvider>
                           <FollowListProvider>
@@ -60,7 +62,8 @@ export default function App(): JSX.Element {
                         </Nip05CommunitiesProvider>
                       </FavoriteRelaysProvider>
                     </TranslationServiceProvider>
-                  </ZapProvider>
+                      </ZapProvider>
+                  </GuestConversionProvider>
                 </NostrProvider>
               </DeletedEventProvider>
             </ContentPolicyProvider>

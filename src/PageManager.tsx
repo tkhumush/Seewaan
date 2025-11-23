@@ -1,8 +1,10 @@
+import GuestConversionModal from '@/components/GuestConversionModal'
 import Sidebar from '@/components/Sidebar'
 import { cn } from '@/lib/utils'
 import NoteListPage from '@/pages/primary/NoteListPage'
 import HomePage from '@/pages/secondary/HomePage'
 import { CurrentRelaysProvider } from '@/providers/CurrentRelaysProvider'
+import { useGuestConversion } from '@/providers/GuestConversionProvider'
 import { TPageRef } from '@/types'
 import {
   cloneElement,
@@ -117,6 +119,7 @@ export function PageManager({ maxStackSize = 5 }: { maxStackSize?: number }) {
   const { isSmallScreen } = useScreenSize()
   const { themeSetting } = useTheme()
   const { enableSingleColumnLayout } = useUserPreferences()
+  const { open: guestModalOpen, setOpen: setGuestModalOpen } = useGuestConversion()
   const ignorePopStateRef = useRef(false)
 
   useEffect(() => {
@@ -337,6 +340,7 @@ export function PageManager({ maxStackSize = 5 }: { maxStackSize?: number }) {
               <BottomNavigationBar />
               <TooManyRelaysAlertDialog />
               <CreateWalletGuideToast />
+              <GuestConversionModal open={guestModalOpen} onClose={() => setGuestModalOpen(false)} />
             </NotificationProvider>
           </CurrentRelaysProvider>
         </SecondaryPageContext.Provider>
@@ -398,6 +402,7 @@ export function PageManager({ maxStackSize = 5 }: { maxStackSize?: number }) {
               </div>
               <TooManyRelaysAlertDialog />
               <CreateWalletGuideToast />
+              <GuestConversionModal open={guestModalOpen} onClose={() => setGuestModalOpen(false)} />
               <BackgroundAudio className="fixed bottom-20 right-0 z-50 w-80 rounded-l-full rounded-r-none overflow-hidden shadow-lg border" />
             </NotificationProvider>
           </CurrentRelaysProvider>
